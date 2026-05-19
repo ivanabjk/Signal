@@ -1,0 +1,53 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  overflow: hidden;
+}
+
+#game-container {
+  position: relative;
+  width: 960px;
+  height: 540px;
+  box-shadow: 0 0 40px rgba(255, 165, 0, 0.3);
+}
+
+#game-canvas {
+  display: block;
+  background: #1a0f08; /* placeholder — zones will override */
+  image-rendering: pixelated; /* crisp rectangles, no blur */
+}
+
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+  pointer-events: none; /* clicks pass through to canvas */
+}
+
+#hearts { color: #ff5050; font-size: 22px; }
+#zone-label { opacity: 0.85; }
+
+#quiz-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+#quiz-overlay.hidden { display: none; }
