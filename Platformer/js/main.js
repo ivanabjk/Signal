@@ -311,7 +311,7 @@ function drawAntennaWall(p) {
   // const barSpacing = 24;
   // for (let by = p.y + 16; by < p.y + p.height; by += barSpacing) {
   //   ctx.fillRect(p.x - 4, by, p.width + 8, 2);
-  // }d
+  // }
 
   // Top — broken/sharp tip
   ctx.fillStyle = "#3a2410";
