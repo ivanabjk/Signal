@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIGNAL — Checkpoint Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: #060611; }
+
+#root {
+  font-family: 'Barlow', sans-serif;
+  height: 100vh; display: flex; flex-direction: column;
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+  position: relative; background: #060611;
+}
+#bg-grid {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.024) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+#vignette {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 35%, transparent 25%, rgba(3,3,10,.78) 100%);
+}
+#null-fx {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none;
+  opacity: 0; display: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(226,75,74,.13) 2px, rgba(226,75,74,.13) 4px);
+}
+@keyframes null-flash { 0%{opacity:0} 12%{opacity:1} 28%{opacity:0} 50%{opacity:.7} 65%{opacity:0} 80%{opacity:.4} 100%{opacity:0} }
+#null-fx.on { display: block; animation: null-flash .55s ease forwards; }
+
+/* HEADER */
+#header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 18px;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+#hearts { display: flex; gap: 4px; }
+.heart { font-size: 18px; color: #E24B4A; filter: drop-shadow(0 0 5px #E24B4A); transition: all .35s; }
+.heart.off { opacity: .12; filter: none; color: #444; }
+#brand { text-align: center; }
+#game-title {
+  font-family: 'Share Tech Mono', monospace; font-size: 22px;
+  letter-spacing: 8px; color: var(--acc); text-shadow: 0 0 18px var(--acc); line-height: 1;
+}
+#zone-sub { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 2.5px; color: rgba(255,255,255,.2); margin-top: 2px; }
+#score-wrap { text-align: right; }
+#score-lbl { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 2px; color: rgba(255,255,255,.2); display: block; }
+#score-val { font-family: 'Share Tech Mono', monospace; font-size: 22px; color: var(--acc); line-height: 1; }
+
+/* STATUS BAR */
+#statusbar {
+  display: flex; align-items: center; gap: 10px; padding: 4px 18px;
+  background: rgba(0,0,0,.4); border-bottom: 1px solid rgba(255,255,255,.03);
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+#echo-msg { flex: 1; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: rgba(0,255,136,.65); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#echo-msg::before { content: 'ECHO ▸  '; color: rgba(0,255,136,.28); }
+#prog-track { width: 72px; height: 3px; background: rgba(255,255,255,.07); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+#prog-fill { height: 100%; width: 0%; background: var(--acc); border-radius: 10px; transition: width .35s ease; }
+
+/* PLAY */
+#play { flex: 1; position: relative; overflow: hidden; z-index: 5; }
+
+/* CARDS */
+.card {
+  position: absolute; width: 144px; padding: 11px 13px 10px; border-radius: 10px;
+  background: rgba(10,10,26,.95); border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 6px 24px rgba(0,0,0,.7); cursor: grab; text-align: center; z-index: 5;
+  transition: transform .13s, box-shadow .13s, border-color .13s, opacity .13s;
+}
+.card-stripe { position: absolute; top: 0; left: 14px; right: 14px; height: 1.5px; border-radius: 0 0 2px 2px; background: var(--acc); opacity: .7; }
+.card:hover  { transform: translateY(-3px) scale(1.035); border-color: rgba(255,255,255,.18); }
+.card.sel    { transform: translateY(-4px) scale(1.05); border-color: var(--acc); box-shadow: 0 0 0 1.5px var(--acc), 0 10px 30px rgba(0,0,0,.8); }
+.card.dragging { opacity: .2; cursor: grabbing; }
+.card-term { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.9); line-height: 1.3; }
+.card-hint { font-family: 'Share Tech Mono', monospace; font-size: 8px; color: var(--acc); margin-top: 5px; min-height: 11px; }
+
+/* TOAST */
+.toast {
+  position: absolute; left: 14px; top: 14px; pointer-events: none; z-index: 50;
+  background: rgba(4,4,14,.97); color: rgba(0,255,136,.85);
+  padding: 9px 13px; border-radius: 8px;
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  max-width: 200px; line-height: 1.5; border: 1px solid rgba(0,255,136,.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5); animation: fadein .2s ease;
+}
+.toast-lbl { font-size: 8px; color: rgba(0,255,136,.3); letter-spacing: 2px; margin-bottom: 4px; }
+@keyframes fadein { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+/* BINS — the key fix: bright visible gradients, solid border, good height */
+#bins {
+  display: flex; gap: 6px; padding: 8px 9px 10px;
+  background: rgba(0,0,0,.6); border-top: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+@keyframes bok  { 0%{transform:scale(1)} 40%{transform:translateY(-8px) scale(1.1)} 100%{transform:scale(1)} }
+@keyframes berr { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+.bin {
+  flex: 1; min-height: 80px; border-radius: 11px;
+  border: 1px solid transparent; /* color set by JS per zone */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s, background .15s;
+  position: relative; overflow: hidden;
+  background: rgba(8,8,20,.85); /* dark base always */
+}
+/* top glow line — colour set via --bin-glow custom prop on each bin */
+.bin::before {
+  content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: var(--bin-glow, rgba(255,255,255,.15));
+  box-shadow: 0 0 8px 1px var(--bin-glow, rgba(255,255,255,.1));
+  border-radius: 0 0 4px 4px; pointer-events: none; z-index: 2;
+}
+/* subtle scanline inside each bin */
+.bin::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.06) 3px, rgba(0,0,0,.06) 4px);
+  border-radius: 10px;
+}
+.bin:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 14px var(--bin-glow, rgba(255,255,255,.1)); }
+.bin.hi    { transform: translateY(-6px) scale(1.04); box-shadow: 0 14px 30px rgba(0,0,0,.55), 0 0 20px var(--bin-glow, rgba(255,255,255,.15)); }
+.bin.ok    { animation: bok  .42s ease; }
+.bin.err   { animation: berr .4s  ease; }
+.bin-lbl   { font-size: 10px; font-weight: 800; color: #fff; text-align: center; padding: 0 6px; line-height: 1.25; z-index: 1; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.bin-ico   { font-size: 17px; color: #fff; z-index: 1; min-height: 19px; line-height: 1; font-family: 'Share Tech Mono', monospace; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+
+/* OVERLAY — sibling of #bins so it covers everything */
+#overlay {
+  position: absolute; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(2,2,12,.9); backdrop-filter: blur(18px);
+}
+#overlay.hidden { display: none; }
+
+/* PANEL */
+.panel {
+  background: rgba(6,6,18,.97); border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 26px 30px; text-align: center; max-width: 430px; width: 94%;
+  box-shadow: 0 40px 90px rgba(0,0,0,.8); position: relative; overflow: hidden;
+}
+.panel-line { position: absolute; top: 0; left: 0; right: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--acc), transparent); }
+.ptag  { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 3px; color: rgba(255,255,255,.2); text-transform: uppercase; margin-bottom: 10px; }
+.ptag span { color: var(--acc); }
+.panel h2  { font-size: 22px; font-weight: 900; color: rgba(255,255,255,.92); margin-bottom: 4px; }
+.pquote    { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--acc); opacity: .75; margin-bottom: 14px; line-height: 1.5; }
+.panel p   { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.35); line-height: 1.6; margin-bottom: 12px; }
+.echo-box  { background: rgba(0,255,136,.04); border: 1px solid rgba(0,255,136,.12); border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; text-align: left; }
+.echo-who  { font-family: 'Share Tech Mono', monospace; font-size: 8px; color: rgba(0,255,136,.35); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; }
+.echo-box p { font-family: 'Share Tech Mono', monospace !important; font-size: 10.5px !important; color: rgba(0,255,136,.78) !important; line-height: 1.55; margin-bottom: 0 !important; }
+.story-box  { border-radius: 8px; padding: 10px 13px; margin-bottom: 14px; text-align: left; border: 1px solid; }
+.story-box p { font-family: 'Share Tech Mono', monospace !important; font-size: 10.5px !important; line-height: 1.55; margin-bottom: 0 !important; }
+.story-who  { font-family: 'Share Tech Mono', monospace; font-size: 8px; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 5px; }
+.bin-chips  { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 14px; }
+.bin-chip   { font-size: 9px; font-weight: 800; color: #fff; padding: 5px 11px; border-radius: 20px; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.big-score  { font-family: 'Share Tech Mono', monospace; font-size: 48px; color: var(--acc); line-height: 1; margin-bottom: 4px; }
+.btn {
+  background: transparent; color: var(--acc); border: 1px solid var(--acc);
+  border-radius: 7px; padding: 10px 34px;
+  font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 2.5px;
+  cursor: pointer; text-transform: uppercase; transition: all .18s;
+}
+.btn:hover  { transform: translateY(-1px); background: rgba(255,255,255,.05); box-shadow: 0 0 22px rgba(0,0,0,.3); }
+.btn:active { transform: none; }
+
+/* Zone themes */
+.z1 { --acc: #EF9F27; }
+.z2 { --acc: #5BC8F5; }
+.z3 { --acc: #E24B4A; }
+</style>
+</head>
+<body>
+<div id="root" class="z1">
+  <div id="bg-grid"></div>
+  <div id="vignette"></div>
+  <div id="null-fx"></div>
+
+  <header id="header">
+    <div id="hearts">
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+      <span class="heart">♥</span>
+    </div>
+    <div id="brand">
+      <div id="game-title">SIGNAL</div>
+      <div id="zone-sub">checkpoint quiz</div>
+    </div>
+    <div id="score-wrap">
+      <span id="score-lbl">SCORE</span>
+      <span id="score-val">000</span>
+    </div>
+  </header>
+
+  <div id="statusbar">
+    <div id="echo-msg">Awaiting connection to The Grid...</div>
+    <div id="prog-track"><div id="prog-fill"></div></div>
+  </div>
+
+  <div id="play"></div>
+  <div id="bins"></div>
+
+  <!-- overlay is a direct child of root so it covers bins too -->
+  <div id="overlay"></div>
+</div>
+
+<script>
+// ─── ZONE DATA ────────────────────────────────────────────────────────────────
+
+const ZONES = [
+  {
+    id: 1, cls: 'z1',
+    name: 'The Broadcast District',
+    quote: '"Everything looks like news here. Not everything is."',
+    echoLine: 'NULL scrambled every media signal in this district. Sort them.',
+    echoIntro: 'NULL scrambled every media signal in The Broadcast District. Classify each item by its true format — the gate opens only on correct signals.',
+    goal: 8,
+    cats: [
+      { id:'social',    label:'Social & Online',    glow:'rgba(239,159,39,.7)',  bdr:'rgba(239,159,39,.45)', bg:'linear-gradient(160deg,rgba(239,159,39,.18),rgba(239,159,39,.06))' },
+      { id:'audiovid',  label:'Audio & Video',       glow:'rgba(239,159,39,.5)',  bdr:'rgba(239,159,39,.3)',  bg:'linear-gradient(160deg,rgba(239,159,39,.12),rgba(239,159,39,.04))' },
+      { id:'broadcast', label:'Broadcast & Outdoor', glow:'rgba(239,159,39,.85)', bdr:'rgba(239,159,39,.58)', bg:'linear-gradient(160deg,rgba(239,159,39,.22),rgba(239,159,39,.08))' },
+      { id:'written',   label:'Written & Print',     glow:'rgba(239,159,39,.4)',  bdr:'rgba(239,159,39,.22)', bg:'linear-gradient(160deg,rgba(239,159,39,.09),rgba(239,159,39,.03))' },
+    ],
+    pool: [
+      { term:'Instagram Post',    cat:'social',    hint:'Social platforms are a digital media type.' },
+      { term:'TikTok Video',      cat:'social',    hint:'Short-form video is a social media format.' },
+      { term:'Blog Post',         cat:'social',    hint:'Web publishing is online social media.' },
+      { term:'YouTube Video',     cat:'audiovid',  hint:'Video streaming platforms are digital media.' },
+      { term:'Podcast Episode',   cat:'audiovid',  hint:'Audio streaming is a form of digital media.' },
+      { term:'TV Commercial',     cat:'broadcast', hint:'Broadcast television is a traditional mass medium.' },
+      { term:'Radio Broadcast',   cat:'broadcast', hint:'Radio is a traditional broadcast medium.' },
+      { term:'Billboard Ad',      cat:'broadcast', hint:'Outdoor advertising is a broadcast-adjacent format.' },
+      { term:'Newspaper Article', cat:'written',   hint:'Print media is one of the oldest formats.' },
+    ],
+    beat: {
+      speaker:'ECHO', col:'rgba(0,255,136,.8)', bg:'rgba(0,255,136,.04)', bdr:'rgba(0,255,136,.14)',
+      text:"Mia's press badge is inside this gate. She was here, Kai. The signal is traceable. Zone 2 is deeper — The Social Quarter is where NULL really embedded itself."
+    }
+  },
+  {
+    id: 2, cls: 'z2',
+    name: 'The Social Quarter',
+    quote: '"Everyone is talking. Nobody is listening."',
+    echoLine: 'NULL severed every channel here. Show it how real communication works.',
+    echoIntro: 'NULL severed every communication channel in The Social Quarter. Classify each by how it actually works — the gate opens only on correct signals.',
+    goal: 8,
+    cats: [
+      { id:'inperson',     label:'In-Person',     glow:'rgba(91,200,245,.7)',  bdr:'rgba(91,200,245,.45)', bg:'linear-gradient(160deg,rgba(91,200,245,.18),rgba(91,200,245,.06))' },
+      { id:'nonverbal',    label:'Non-Verbal',     glow:'rgba(91,200,245,.5)',  bdr:'rgba(91,200,245,.3)',  bg:'linear-gradient(160deg,rgba(91,200,245,.12),rgba(91,200,245,.04))' },
+      { id:'live_digital', label:'Live Digital',   glow:'rgba(91,200,245,.85)', bdr:'rgba(91,200,245,.58)', bg:'linear-gradient(160deg,rgba(91,200,245,.22),rgba(91,200,245,.08))' },
+      { id:'async',        label:'Async Written',  glow:'rgba(91,200,245,.4)',  bdr:'rgba(91,200,245,.22)', bg:'linear-gradient(160deg,rgba(91,200,245,.09),rgba(91,200,245,.03))' },
+    ],
+    pool: [
+      { term:'Face-to-Face Talk', cat:'inperson',     hint:'Direct in-person verbal interaction.' },
+      { term:'Group Discussion',  cat:'inperson',     hint:'Multiple people exchanging ideas in person.' },
+      { term:'Public Speech',     cat:'inperson',     hint:'One-to-many verbal communication in person.' },
+      { term:'Sign Language',     cat:'nonverbal',    hint:'A nonverbal, visual communication system.' },
+      { term:'Video Call',        cat:'live_digital', hint:'Synchronous visual digital communication.' },
+      { term:'Phone Call',        cat:'live_digital', hint:'Synchronous real-time audio communication.' },
+      { term:'Text Message',      cat:'async',        hint:'Asynchronous written digital communication.' },
+      { term:'Email Thread',      cat:'async',        hint:'Asynchronous written digital exchange.' },
+    ],
+    beat: {
+      speaker:'ECHO', col:'rgba(0,255,136,.8)', bg:'rgba(0,255,136,.04)', bdr:'rgba(0,255,136,.14)',
+      text:"I remember what I was built for now. I'll stay with you, Kai. Mia's signal is strongest ahead — in the Dark Web Depths. That's where NULL was born. Be careful what you touch in there."
+    }
+  },
+  {
+    id: 3, cls: 'z3',
+    name: 'The Dark Web Depths',
+    quote: '"This is where NULL was born."',
+    echoLine: "NULL's origin server. Name every threat. The final gate is ahead.",
+    echoIntro: "NULL's origin server. Every cyber threat in The Grid was deployed from here. Classify them all — this is the last gate between you and Mia.",
+    goal: 8,
+    cats: [
+      { id:'malware',   label:'Malware',        glow:'rgba(226,75,74,.85)', bdr:'rgba(226,75,74,.58)', bg:'linear-gradient(160deg,rgba(226,75,74,.22),rgba(226,75,74,.08))' },
+      { id:'network',   label:'Network Attack',  glow:'rgba(226,75,74,.5)',  bdr:'rgba(226,75,74,.3)',  bg:'linear-gradient(160deg,rgba(226,75,74,.12),rgba(226,75,74,.04))' },
+      { id:'deception', label:'Deception',       glow:'rgba(226,75,74,.7)',  bdr:'rgba(226,75,74,.45)', bg:'linear-gradient(160deg,rgba(226,75,74,.18),rgba(226,75,74,.06))' },
+      { id:'exploit',   label:'Code Exploit',    glow:'rgba(226,75,74,.4)',  bdr:'rgba(226,75,74,.22)', bg:'linear-gradient(160deg,rgba(226,75,74,.09),rgba(226,75,74,.03))' },
+    ],
+    pool: [
+      { term:'Ransomware',         cat:'malware',   hint:'Malware that encrypts files and demands payment.' },
+      { term:'Spyware',            cat:'malware',   hint:'Software that secretly monitors your activity.' },
+      { term:'DDoS Attack',        cat:'network',   hint:'Overwhelming a server with massive traffic.' },
+      { term:'SQL Injection',      cat:'network',   hint:'Malicious code inserted into database queries.' },
+      { term:'Phishing Email',     cat:'deception', hint:'Deceptive emails designed to steal credentials.' },
+      { term:'Social Engineering', cat:'deception', hint:'Manipulating people rather than systems directly.' },
+      { term:'Brute Force',        cat:'exploit',   hint:'Systematically trying passwords until one works.' },
+      { term:'Zero-Day Exploit',   cat:'exploit',   hint:'Attacking an unknown, unpatched vulnerability.' },
+    ],
+    beat: {
+      speaker:'MIA', col:'rgba(250,192,96,.9)', bg:'rgba(250,192,96,.04)', bdr:'rgba(250,192,96,.18)',
+      text:"You made it. NULL built all of this from one idea — that confusion is more profitable than clarity. Accurate information, correctly classified — that was always the weapon. The Grid is rebooting."
+    }
+  }
+];
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const TICK_MS=100, BASE_SPD=2.3, SPD_INC=0.4, SPAWN_MS=2600, SPAWN_DEC=280, SPAWN_MIN=850, MAX_CARDS=4, CARD_H=78;
+const shuffle = a => [...a].sort(() => Math.random() - .5);
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+
+let cards=[], score=0, lives=3, zoneCorrect=0, totalCorrect=0;
+let selId=null, pool=[], poolIdx=0, cardId=0;
+let fallTimer=null, spawnTimer=null;
+let zoneIdx=0, gameActive=false;
+
+// ─── DOM ──────────────────────────────────────────────────────────────────────
+
+const $root    = document.getElementById('root');
+const $play    = document.getElementById('play');
+const $overlay = document.getElementById('overlay');
+const $scoreV  = document.getElementById('score-val');
+const $zoneSub = document.getElementById('zone-sub');
+const $echoMsg = document.getElementById('echo-msg');
+const $progF   = document.getElementById('prog-fill');
+const $hearts  = document.querySelectorAll('.heart');
+const $nullFx  = document.getElementById('null-fx');
+const $bins    = document.getElementById('bins');
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function setTheme(i)   { $root.className = ZONES[i].cls; }
+function setEcho(t)    { $echoMsg.textContent = t; }
+function pad(n)        { return String(n).padStart(3,'0'); }
+
+function updateHUD() {
+  $scoreV.textContent  = pad(score);
+  $progF.style.width   = ((zoneCorrect / ZONES[zoneIdx].goal) * 100) + '%';
+  $hearts.forEach((h,i) => h.classList.toggle('off', i >= lives));
+}
+
+function triggerNull() {
+  $nullFx.classList.remove('on'); void $nullFx.offsetWidth; $nullFx.classList.add('on');
+  setTimeout(() => $nullFx.classList.remove('on'), 600);
+}
+
+function showToast(hint) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div class="toast-lbl">ECHO · HINT</div>${hint}`;
+  $play.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ─── OVERLAY ─────────────────────────────────────────────────────────────────
+
+function showOverlay(html, cb) {
+  $overlay.innerHTML = html;
+  $overlay.classList.remove('hidden');
+  const btn = $overlay.querySelector('.btn');
+  if (btn && cb) btn.addEventListener('click', cb);
+}
+function hideOverlay() { $overlay.classList.add('hidden'); }
+
+// ─── BINS ─────────────────────────────────────────────────────────────────────
+
+function buildBins(zone) {
+  $bins.innerHTML = '';
+  zone.cats.forEach(cat => {
+    const bin = document.createElement('div');
+    bin.className = 'bin';
+    bin.dataset.bid = cat.id;
+    bin.style.background   = cat.bg;
+    bin.style.borderColor  = cat.bdr;
+    bin.style.setProperty('--bin-glow', cat.glow);
+    bin.innerHTML = `<div class="bin-lbl">${cat.label}</div><div class="bin-ico"></div>`;
+    bin.addEventListener('dragover',  e => { e.preventDefault(); bin.classList.add('hi'); });
+    bin.addEventListener('dragleave', ()  => { if (!selId) bin.classList.remove('hi'); });
+    bin.addEventListener('drop', e => {
+      e.preventDefault(); bin.classList.remove('hi');
+      const cid = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      if (!isNaN(cid)) handleSort(cid, cat.id);
+    });
+    bin.addEventListener('click', () => { if (selId !== null) handleSort(selId, cat.id); });
+    $bins.appendChild(bin);
+  });
+}
+
+function flashBin(bid, ok) {
+  const bin = document.querySelector(`.bin[data-bid="${bid}"]`);
+  if (!bin) return;
+  const ico = bin.querySelector('.bin-ico');
+  bin.classList.remove('ok','err'); void bin.offsetWidth;
+  bin.classList.add(ok ? 'ok' : 'err');
+  ico.textContent = ok ? '✓' : '✗';
+  setTimeout(() => { bin.classList.remove('ok','err'); ico.textContent=''; }, 480);
+}
+
+// ─── SCREENS ──────────────────────────────────────────────────────────────────
+
+function showIntro() {
+  setTheme(0);
+  showOverlay(`
+    <div class="panel">
+      <div class="panel-line"></div>
+      <div class="ptag">Signal HQ · <span>Checkpoint Training System</span></div>
+      <h2>SIGNAL</h2>
+      <div class="pquote" style="margin-bottom:16px;">"The noise never created anything.<br>It just rearranged what we already believed."</div>
+      <div class="echo-box">
+        <div class="echo-who">ECHO · AI Companion</div>
+        <p>Kai — three checkpoint towers stand between you and Mia. Each one tests your ability to classify information correctly. NULL feeds on confusion. Correct classification is the only weapon.</p>
+      </div>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.5px;margin-bottom:18px;">Drag or click cards · then select the right bin · 3 lives per zone</p>
+      <button class="btn">Enter The Grid</button>
+    </div>
+  `, () => startZone(0));
+}
+
+function showZoneIntro(idx) {
+  const z = ZONES[idx];
+  const chips = z.cats.map(c => `<span class="bin-chip" style="background:${c.bg};border:1px solid ${c.bdr};color:rgba(255,255,255,.85);">${c.label}</span>`).join('');
+  showOverlay(`
+    <div class="panel">
+      <div class="panel-line"></div>
+      <div class="ptag">Zone 0${z.id} · <span>${z.name}</span></div>
+      <h2>Checkpoint Gate</h2>
+      <div class="pquote">${z.quote}</div>
+      <div class="echo-box">
+        <div class="echo-who">ECHO</div>
+        <p>${z.echoIntro}</p>
+      </div>
+      <div class="bin-chips">${chips}</div>
+      <button class="btn">Open Checkpoint</button>
+    </div>
+  `, () => { hideOverlay(); beginPlaying(idx); });
+}
+
+function showStoryBeat(idx) {
+  const z = ZONES[idx], b = z.beat, last = idx === ZONES.length - 1;
+  showOverlay(`
+    <div class="panel">
+      <div class="panel-line"></div>
+      <div class="ptag">Zone 0${z.id} · <span>${last ? 'All Zones Cleared' : 'Checkpoint Cleared'}</span></div>
+      <h2>${last ? 'NULL Neutralised' : 'Gate Open'}</h2>
+      <div class="pquote" style="margin-bottom:14px;">${z.quote}</div>
+      <div class="story-box" style="background:${b.bg};border-color:${b.bdr};">
+        <div class="story-who" style="color:${b.col.replace('.8)','.4)').replace('.9)','.4)')};">${b.speaker}</div>
+        <p style="color:${b.col} !important;">"${b.text}"</p>
+      </div>
+      ${last
+        ? `<div class="big-score">${pad(score)}</div><p style="margin-bottom:16px;">${totalCorrect} signals classified · all three zones cleared</p>`
+        : `<p style="font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.5px;margin-bottom:14px;">Score: ${score} · advancing to Zone 0${idx+2}</p>`
+      }
+      <button class="btn">${last ? 'The Grid Reboots' : `Advance → Zone 0${idx+2}`}</button>
+    </div>
+  `, () => last ? showIntro() : startZone(idx + 1));
+}
+
+function showGameOver() {
+  showOverlay(`
+    <div class="panel">
+      <div class="panel-line"></div>
+      <div class="ptag">NULL · <span>Signal Severed</span></div>
+      <h2>Connection Dropped</h2>
+      <div class="echo-box">
+        <div class="echo-who">ECHO</div>
+        <p>NULL overwhelmed the checkpoint. The knowledge is still there, Kai. The gate responds to repeated signal — try again.</p>
+      </div>
+      <div class="big-score" style="font-size:40px;margin-bottom:6px;">${pad(score)}</div>
+      <p style="font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.2);margin-bottom:18px;">Zone 0${zoneIdx+1} · ${zoneCorrect} classified this attempt</p>
+      <button class="btn">Retry Zone 0${zoneIdx+1}</button>
+    </div>
+  `, () => startZone(zoneIdx));
+}
+
+// ─── GAME FLOW ────────────────────────────────────────────────────────────────
+
+// startZone: reset state, build bins, show zone intro
+// Called for every zone start (including zone 1 on first play)
+function startZone(idx) {
+  zoneIdx     = idx;
+  lives       = 3;
+  zoneCorrect = 0;
+  cards.forEach(c => c.el && c.el.remove());
+  cards=[]; cardId=0; selId=null;
+  pool    = shuffle(ZONES[idx].pool);
+  poolIdx = 0;
+  buildBins(ZONES[idx]);          // ← always build bins before showing intro
+  setTheme(idx);
+  $zoneSub.textContent = ZONES[idx].name.toLowerCase();
+  setEcho(ZONES[idx].echoLine);
+  updateHUD();
+  showZoneIntro(idx);
+}
+
+function beginPlaying(idx) {
+  gameActive = true;
+  clearInterval(fallTimer); clearInterval(spawnTimer);
+  fallTimer  = setInterval(tick, TICK_MS);
+  const ms   = Math.max(SPAWN_MIN, SPAWN_MS - idx * SPAWN_DEC);
+  spawnTimer = setInterval(spawnCard, ms);
+  spawnCard();
+}
+
+function stopPlaying() {
+  gameActive = false;
+  clearInterval(fallTimer); clearInterval(spawnTimer);
+  cards.forEach(c => c.el && c.el.remove());
+  cards=[];
+  deselect();
+}
+
+// ─── CARDS ────────────────────────────────────────────────────────────────────
+
+function spawnCard() {
+  if (!gameActive || cards.length >= MAX_CARDS) return;
+  if (poolIdx >= pool.length) { pool = shuffle(ZONES[zoneIdx].pool); poolIdx=0; }
+  const data  = pool[poolIdx++];
+  const id    = ++cardId;
+  const x     = (cardId % 4) * 19 + 4 + Math.random() * 4;
+  const speed = BASE_SPD + zoneIdx * SPD_INC;
+  const card  = { id, ...data, x, y:-(CARD_H+10), speed };
+  card.el     = makeCardEl(card);
+  cards.push(card);
+}
+
+function makeCardEl(data) {
+  const el = document.createElement('div');
+  el.className = 'card'; el.id = `c${data.id}`; el.draggable = true;
+  el.style.cssText = `left:${data.x}%;top:${data.y}px`;
+  el.innerHTML = `<div class="card-stripe"></div><div class="card-term">${data.term}</div><div class="card-hint"></div>`;
+  el.addEventListener('dragstart', e => {
+    e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', String(data.id));
+    el.classList.add('dragging'); deselect();
+  });
+  el.addEventListener('dragend', () => {
+    el.classList.remove('dragging');
+    if (!selId) document.querySelectorAll('.bin').forEach(b => b.classList.remove('hi'));
+  });
+  el.addEventListener('click', e => { e.stopPropagation(); selId===data.id ? deselect() : select(data.id); });
+  $play.appendChild(el);
+  return el;
+}
+
+// ─── SELECTION ────────────────────────────────────────────────────────────────
+
+function select(id) {
+  deselect(); selId = id;
+  const el = document.getElementById(`c${id}`);
+  if (!el) return;
+  el.classList.add('sel');
+  el.querySelector('.card-hint').textContent = 'select bin ↓';
+  document.querySelectorAll('.bin').forEach(b => b.classList.add('hi'));
+}
+
+function deselect() {
+  if (selId !== null) {
+    const el = document.getElementById(`c${selId}`);
+    if (el) { el.classList.remove('sel'); el.querySelector('.card-hint').textContent=''; }
+    selId = null;
+    document.querySelectorAll('.bin').forEach(b => b.classList.remove('hi'));
+  }
+}
+
+// ─── SORT ─────────────────────────────────────────────────────────────────────
+
+function handleSort(cid, bid) {
+  const idx = cards.findIndex(c => c.id === cid);
+  if (idx === -1) return;
+  const card = cards[idx], ok = card.cat === bid;
+  card.el.remove(); cards.splice(idx,1); deselect();
+  flashBin(bid, ok);
+
+  if (ok) {
+    score        += 10 * (zoneIdx + 1);
+    zoneCorrect  += 1;
+    totalCorrect += 1;
+    const left = ZONES[zoneIdx].goal - zoneCorrect;
+    setEcho(left > 0 ? `✓ Correct. ${left} signal${left===1?'':'s'} left to clear this zone.` : '✓ Zone signal restored.');
+    updateHUD();
+    if (zoneCorrect >= ZONES[zoneIdx].goal) {
+      stopPlaying();
+      setTimeout(() => showStoryBeat(zoneIdx), 350);
+    }
+  } else {
+    lives = Math.max(0, lives - 1);
+    triggerNull(); showToast(card.hint);
+    setEcho(`NULL fragment. ${lives} ${lives===1?'life':'lives'} remaining.`);
+    updateHUD();
+    if (lives <= 0) { stopPlaying(); setTimeout(showGameOver, 450); }
+  }
+}
+
+// ─── TICK ─────────────────────────────────────────────────────────────────────
+
+function tick() {
+  if (!gameActive) return;
+  const h = $play.clientHeight, missed = [];
+  cards.forEach(card => {
+    card.y += card.speed;
+    card.el.style.top = card.y + 'px';
+    if (card.y >= h) missed.push(card);
+  });
+  if (missed.length) {
+    missed.forEach(card => { card.el.remove(); cards.splice(cards.indexOf(card),1); });
+    lives = Math.max(0, lives - missed.length);
+    triggerNull();
+    setEcho(`Signal lost. ${lives} ${lives===1?'life':'lives'} remaining.`);
+    updateHUD();
+    if (lives <= 0) { stopPlaying(); setTimeout(showGameOver, 450); }
+  }
+}
+
+$play.addEventListener('click', e => { if (e.target === $play) deselect(); });
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+showIntro();
+</script>
+</body>
+</html>
