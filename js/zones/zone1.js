@@ -80,4 +80,14 @@ const ZONE_1 = {
     "Mia's hologram flickers into view.",
     'Mia: "Zone 1 is the surface. NULL\'s roots go deeper. Keep going."',
   ],
+
+   // Tower placement — end of the level
+  tower: {
+    x: 2700,         // position in world coordinates
+    y: 380,          // top of the tower
+    width: 60,
+    height: 120,
+    color: '#ff9933', // amber, per the design doc
+    doorColor: '#5a2d0a',
+  },
 };
