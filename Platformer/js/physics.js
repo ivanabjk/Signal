@@ -1,4 +1,4 @@
-const GRAVITY = 0.6;
+const GRAVITY = 0.35;
 
 function applyGravity(entity) {
   entity.vy += GRAVITY;
@@ -48,4 +48,12 @@ function moveY(entity, platforms) {
       }
     }
   }
+}
+
+function checkHarmfulCollision(entity, platforms) {
+  for (const p of platforms) {
+    if (!p.harmful) continue;
+    if (rectsOverlap(entity, p)) return p;
+  }
+  return null;
 }

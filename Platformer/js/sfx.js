@@ -9,7 +9,7 @@ function getAudioCtx() {
   return audioCtx;
 }
 
-function playTone(frequency, duration, type = 'square', volume = 0.15) {
+function playTone(frequency, duration, type = "square", volume = 0.15) {
   const ctx = getAudioCtx();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -30,18 +30,23 @@ function playTone(frequency, duration, type = 'square', volume = 0.15) {
 
 function playSfx(name) {
   switch (name) {
-    case 'jump':
+    case "jump":
       // Quick upward chirp
-      playTone(440, 0.08, 'square');
-      setTimeout(() => playTone(660, 0.06, 'square'), 40);
+      playTone(440, 0.08, "square");
+      setTimeout(() => playTone(660, 0.06, "square"), 40);
       break;
-    case 'zap':
+    case "doubleJump":
+      // Higher, lighter than the regular jump — feels like a boost
+      playTone(660, 0.06, "square");
+      setTimeout(() => playTone(880, 0.08, "square"), 30);
+      break;
+    case "zap":
       // Harsh buzz — for enemy contact later
-      playTone(150, 0.15, 'sawtooth', 0.2);
+      playTone(150, 0.15, "sawtooth", 0.2);
       break;
-    case 'land':
+    case "land":
       // Soft thud
-      playTone(120, 0.05, 'triangle', 0.1);
+      playTone(120, 0.05, "triangle", 0.1);
       break;
   }
 }

@@ -1,14 +1,23 @@
 const camera = {
-  x: 0,           // top-left corner of camera in world coordinates
-  y: 0,           // not used yet — vertical scroll comes in Zone 2
-  deadzone: 200,  // half-width of the center band where Kai moves freely
+  x: 0,
+  y: 0,
+  deadzone: 200,
+  shakeIntensity: 0,
+  shakeTimer: 0,
+  shakeOffsetX: 0,
+  shakeOffsetY: 0,
 };
 
-function updateCamera(kai, levelWidth) {
-  // Target: keep Kai centered horizontally
-  const target = kai.x + kai.width / 2 - canvas.width / 2;
+function shakeCamera(intensity = 6, duration = 12) {
+  // Take the stronger of current or new shake (don't let weak shakes override strong ones)
+  if (intensity > camera.shakeIntensity) {
+    camera.shakeIntensity = intensity;
+    camera.shakeTimer = duration;
+  }
+}
 
-  // Deadzone: only move camera when Kai is far from current center
+function updateCamera(kai, levelWidth) {
+  // Existing follow logic
   const cameraCenter = camera.x + canvas.width / 2;
   const kaiCenter = kai.x + kai.width / 2;
 
@@ -18,9 +27,23 @@ function updateCamera(kai, levelWidth) {
     camera.x = kaiCenter - canvas.width / 2 + camera.deadzone;
   }
 
-  // Clamp so we don't show areas past the level bounds
   if (camera.x < 0) camera.x = 0;
   if (camera.x > levelWidth - canvas.width) {
     camera.x = levelWidth - canvas.width;
+  }
+
+  // Shake decay
+  if (camera.shakeTimer > 0) {
+    camera.shakeTimer--;
+    // Random offset in both directions
+    const t = camera.shakeIntensity;
+    camera.shakeOffsetX = (Math.random() - 0.5) * 2 * t;
+    camera.shakeOffsetY = (Math.random() - 0.5) * 2 * t;
+    // Decay intensity over time
+    camera.shakeIntensity *= 0.85;
+  } else {
+    camera.shakeIntensity = 0;
+    camera.shakeOffsetX = 0;
+    camera.shakeOffsetY = 0;
   }
 }
