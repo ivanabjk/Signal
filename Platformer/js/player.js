@@ -58,7 +58,7 @@ function updatePlayer(kai, platforms) {
   applyGravity(kai);
   moveX(kai, platforms);
   moveY(kai, platforms);
-
+  applyMovingPlatformCarry(kai, platforms);
   // === Spike check ===
   const spike = checkHarmfulCollision(kai, platforms);
   if (spike) {
@@ -110,6 +110,17 @@ function checkEnemyCollisions(kai, enemies) {
     if (!e.alive) continue;
     if (rectsOverlap(kai, e)) {
       zapKai(kai, e);  // ← pass the enemy
+      return;
+    }
+  }
+}
+function checkBubbleCollisions(kai, bubbles) {
+  for (const b of bubbles) {
+    if (!b.alive) continue;
+    if (rectsOverlap(kai, b)) {
+      // Bubble pops on contact AND zaps Kai
+      b.alive = false;
+      zapKai(kai, b);
       return;
     }
   }

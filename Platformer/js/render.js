@@ -64,7 +64,7 @@ function mulberry32(seed) {
   let a = seed;
   return function () {
     a |= 0;
-    a = (a + 0x6D2B79F5) | 0;
+    a = (a + 0x6d2b79f5) | 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -77,67 +77,68 @@ function mulberry32(seed) {
 function drawSky(palette) {
   // Vertical gradient from deep amber at top to lighter near horizon
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#1a0a06');           // very dark amber at top
-  gradient.addColorStop(0.6, palette.bg);        // zone background color
-  gradient.addColorStop(1, '#4a2418');           // warm horizon glow
+  gradient.addColorStop(0, palette.bg); // very dark amber at top
+  gradient.addColorStop(0.6, palette.floor); // zone background color
+  gradient.addColorStop(1, palette.floor); // warm horizon glow
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 function drawDistantAntennas(palette) {
   if (!zoneBackground) return;
-  // Scroll at 10% of camera speed
   const scrollX = camera.x * 0.1;
   const groundY = 440;
 
-  ctx.fillStyle = 'rgba(50, 25, 15, 0.5)';  // dark silhouettes
+  const silhouetteColor = palette.wall
+    ? `${palette.wall}80`
+    : "rgba(50, 25, 15, 0.5)";
+  ctx.fillStyle = silhouetteColor;
 
   for (const a of zoneBackground.distantAntennas) {
     const sx = a.x - scrollX;
-    // Skip if off-screen
     if (sx < -50 || sx > canvas.width + 50) continue;
 
-    // Mast
     ctx.fillRect(sx, groundY - a.height, a.width, a.height);
-    // Crossbar near top (antenna shape)
     ctx.fillRect(sx - 8, groundY - a.height + 10, 20, 2);
-    // Optional dish
     if (a.hasDish) {
       ctx.beginPath();
       ctx.arc(sx + a.width / 2, groundY - a.height, 8, 0, Math.PI * 2);
       ctx.fill();
     }
-    // Red blinking light (always on for simplicity)
-    ctx.fillStyle = '#ff4040';
+    ctx.fillStyle = palette.accent || "#ff4040";
     ctx.fillRect(sx + a.width / 2 - 1, groundY - a.height - 4, 2, 2);
-    ctx.fillStyle = 'rgba(50, 25, 15, 0.5)';
+    ctx.fillStyle = silhouetteColor;
   }
 }
 
 function drawMidWreckage(palette) {
   if (!zoneBackground) return;
-  // Scroll at 40% of camera speed — closer than distant antennas
   const scrollX = camera.x * 0.4;
   const groundY = 470;
 
-  ctx.fillStyle = 'rgba(70, 35, 20, 0.7)';
+  ctx.fillStyle = palette.wall ? `${palette.wall}b0` : "rgba(70, 35, 20, 0.7)";
 
   for (const w of zoneBackground.midWreckage) {
     const sx = w.x - scrollX;
     if (sx < -150 || sx > canvas.width + 150) continue;
 
     switch (w.type) {
-      case 0: // Collapsed print press — tilted box with small chimney
+      case 0:
         ctx.fillRect(sx, groundY - w.height * 0.6, w.width, w.height * 0.6);
-        ctx.fillRect(sx + w.width * 0.4, groundY - w.height, 14, w.height * 0.4);
+        ctx.fillRect(
+          sx + w.width * 0.4,
+          groundY - w.height,
+          14,
+          w.height * 0.4,
+        );
         break;
-      case 1: // Satellite dish — semi-circle on a pole
+      case 1:
         ctx.fillRect(sx + w.width / 2 - 3, groundY - w.height, 6, w.height);
         ctx.beginPath();
         ctx.arc(sx + w.width / 2, groundY - w.height, w.width / 2, Math.PI, 0);
         ctx.fill();
         break;
-      case 2: // Radio tower — triangular truss shape
+      case 2:
         ctx.beginPath();
         ctx.moveTo(sx, groundY);
         ctx.lineTo(sx + w.width / 2, groundY - w.height);
@@ -151,16 +152,17 @@ function drawMidWreckage(palette) {
 
 function drawClouds(palette) {
   if (!zoneBackground) return;
-
-  // Clouds drift independently of camera, slowly across the screen
   const time = Date.now() / 1000;
 
-  ctx.fillStyle = 'rgba(255, 153, 51, 0.06)';  // amber haze
+  const accent = palette.accent || "#ff9933";
+  const r = parseInt(accent.slice(1, 3), 16);
+  const g = parseInt(accent.slice(3, 5), 16);
+  const b = parseInt(accent.slice(5, 7), 16);
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.06)`;
 
   for (const c of zoneBackground.clouds) {
-    // Calculate position: drift over time, wrap around screen
-    const driftX = (c.x + time * c.speed * 10) % (canvas.width + c.width * 2) - c.width;
-    // Draw as a few overlapping ellipses for cloud shape
+    const driftX =
+      ((c.x + time * c.speed * 10) % (canvas.width + c.width * 2)) - c.width;
     const cy = c.y;
     ctx.beginPath();
     ctx.ellipse(driftX, cy, c.width * 0.4, 16, 0, 0, Math.PI * 2);
@@ -172,7 +174,7 @@ function drawClouds(palette) {
 
 function drawScanlines() {
   // Horizontal lines drawn across the whole screen — emulates CRT scan-lines
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+  ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
   for (let y = 0; y < canvas.height; y += 3) {
     ctx.fillRect(0, y, canvas.width, 1);
   }
@@ -180,8 +182,12 @@ function drawScanlines() {
 
 function drawParticles() {
   if (!zoneBackground) return;
+  const palette = game.currentZone?.palette;
+  const accent = palette?.accent || "#ff9933";
+  const r = parseInt(accent.slice(1, 3), 16);
+  const g = parseInt(accent.slice(3, 5), 16);
+  const b = parseInt(accent.slice(5, 7), 16);
 
-  // Embers drifting upward — purely cosmetic
   for (const p of zoneBackground.particles) {
     p.y -= p.speed;
     p.x += p.drift;
@@ -189,9 +195,53 @@ function drawParticles() {
       p.y = canvas.height + 10;
       p.x = Math.random() * canvas.width;
     }
-    ctx.fillStyle = `rgba(255, 180, 80, ${0.4 + Math.sin(Date.now() / 200 + p.x) * 0.2})`;
+    const alpha = 0.4 + Math.sin(Date.now() / 200 + p.x) * 0.2;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.fillRect(p.x, p.y, p.size, p.size);
   }
+}
+
+function drawCommentPlatform(p) {
+  ctx.fillStyle = "#2a2040"; // dark purple base
+  ctx.fillRect(p.x, p.y, p.width, p.height);
+
+  // Faint text lines
+  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  for (let i = 6; i < p.height; i += 6) {
+    ctx.fillRect(p.x + 4, p.y + i, p.width - 8, 1);
+  }
+
+  // Small "like" icon
+  ctx.fillStyle = "#ff66cc";
+  ctx.fillRect(p.x + p.width - 12, p.y + 4, 6, 6);
+}
+
+function drawHashtagWall(p) {
+  ctx.fillStyle = "#1a1430"; // dark wall
+  ctx.fillRect(p.x, p.y, p.width, p.height);
+
+  ctx.fillStyle = "#ff66cc";
+  ctx.font = 'bold 16px "Courier New"';
+  for (let y = p.y; y < p.y + p.height; y += 40) {
+    ctx.fillText("#", p.x + p.width / 2, y + 20);
+  }
+}
+
+function drawNotificationBubbles() {
+  ctx.fillStyle = "rgba(51,153,255,0.15)";
+  for (let i = 0; i < 5; i++) {
+    const x = (Date.now() / 50 + i * 120) % canvas.width;
+    const y = canvas.height - ((Date.now() / 30 + i * 80) % canvas.height);
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPulseLighting() {
+  const alpha = (Math.sin(Date.now() / 800) + 1) * 0.15; // 0–0.3
+  ctx.fillStyle = `rgba(255,102,204,${alpha})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // Master function — called from render() before the world translate
@@ -206,4 +256,8 @@ function drawBackground(palette) {
 function drawForegroundEffects() {
   drawParticles();
   drawScanlines();
+  if (game.currentZone.id === "zone2") {
+    drawNotificationBubbles();
+    // drawPulseLighting();
+  }
 }

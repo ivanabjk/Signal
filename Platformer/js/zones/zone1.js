@@ -60,9 +60,16 @@ const ZONE_1 = {
       160,
       16,
       null,
-      { onFrames: 450, offFrames: 200, startVisible: true },
-    ], // 17: billboard shortcut
-
+      null,
+      {
+        path: [
+          { x: 4000, y: 320 },
+          { x: 4200, y: 320 },
+        ],
+        speed: 1,
+        pingPong: true,
+      },
+    ],
     // === Section D: Tower Approach (4400–6000) ===
     [4480, 400, 180, 16], // 18: approach 1
     [
@@ -150,4 +157,6 @@ const ZONE_1 = {
     // Door hitbox covers most of the tower so Kai easily triggers it
     door: { offsetX: 10, offsetY: 10, width: 80, height: 90 },
   },
+
+  nextZone: null,
 };

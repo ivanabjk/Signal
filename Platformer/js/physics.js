@@ -57,3 +57,23 @@ function checkHarmfulCollision(entity, platforms) {
   }
   return null;
 }
+
+// After normal physics, check if entity is riding a moving platform and apply its delta
+function applyMovingPlatformCarry(entity, platforms) {
+  if (!entity.onGround) return;
+
+  // Find a moving platform directly underneath the entity
+  // (entity's bottom edge is touching platform's top)
+  for (const p of platforms) {
+    if (!p.moving || !p.solid) continue;
+    // Check if entity is on top of this platform
+    const entityBottom = entity.y + entity.height;
+    const onTop = Math.abs(entityBottom - p.y) < 2; // within 2px of top
+    const xOverlap = entity.x + entity.width > p.x && entity.x < p.x + p.width;
+    if (onTop && xOverlap) {
+      entity.x += p.moving.dx;
+      entity.y += p.moving.dy;
+      return; // only one platform at a time
+    }
+  }
+}

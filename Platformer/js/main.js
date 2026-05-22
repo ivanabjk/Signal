@@ -4,6 +4,14 @@ const heartsHud = document.getElementById("hearts");
 
 const RESPAWN_GRACE = 90;
 
+// Helper — converts a hex color (#rrggbb) to rgba string with given alpha
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const game = {
   kai: {
     x: 100,
@@ -20,13 +28,16 @@ const game = {
     invincibleTimer: 0,
     coyoteTimer: 0,
     jumpBuffer: 0,
-    jumpsRemaining: 2, // ← add this
+    jumpsRemaining: 2,
     knockbackTimer: 0,
     dying: false,
   },
   levelWidth: 0,
   platforms: [],
   enemies: [],
+  bubbles: [],
+  bubbleSpawners: [],
+  cameraRegions: [],
   currentZone: null,
   towerNearby: false,
 };
@@ -51,20 +62,17 @@ function loadZone(zoneConfig) {
         p[5].offFrames,
         p[5].startVisible,
       );
+    if (p[6]) makeMoving(platform, p[6].path, p[6].speed, p[6].pingPong);
 
-    // Auto-detect style based on platform position/properties
     if (i === 0) {
       platform.style = "floor";
     } else if (p[3] > 100 && p[2] < 50) {
-      // Tall and narrow = antenna wall
       platform.style = "antennaWall";
     }
-    // else: default antennaPlatform style (no field needed)
 
     return platform;
   });
 
-  // Spikes — separate config array
   if (zoneConfig.spikes) {
     for (const s of zoneConfig.spikes) {
       game.platforms.push(createSpike(s[0], s[1], s[2], s[3] || "#cc3333"));
@@ -84,6 +92,10 @@ function loadZone(zoneConfig) {
       eyeColor: e.options?.eyeColor,
     });
   });
+
+  game.bubbles = [];
+  game.bubbleSpawners = createSpawner(zoneConfig);
+  game.cameraRegions = zoneConfig.cameraRegions || [];
 
   game.tower = zoneConfig.tower
     ? { ...zoneConfig.tower, triggered: false }
@@ -108,10 +120,14 @@ function reloadZone() {
   k.hearts = 3;
   k.coyoteTimer = 0;
   k.jumpBuffer = 0;
-  k.jumpsRemaining = 2; // ← add this
+  k.jumpsRemaining = 2;
   k.knockbackTimer = 0;
   k.invincibleTimer = RESPAWN_GRACE;
   resetEnemies(game.enemies);
+  resetMovingPlatforms(game.platforms);
+  clearBubbles(game.bubbles);
+  resetSpawners(game.bubbleSpawners);
+
   for (const p of game.platforms) {
     if (p.flicker) {
       p.flicker.timer = 0;
@@ -121,6 +137,7 @@ function reloadZone() {
   }
   if (game.tower) game.tower.triggered = false;
   camera.x = 0;
+  camera.y = 0;
 }
 
 // === Drawing ===
@@ -130,7 +147,6 @@ function drawKai() {
     return;
   }
 
-  // Subtle bob when moving, gentle breathe when still
   let bob = 0;
   if (k.onGround && Math.abs(k.vx) > 0.1) {
     bob = Math.sin(Date.now() / 80) * 1;
@@ -142,24 +158,19 @@ function drawKai() {
   const w = k.width;
   const h = k.height;
 
-  // Outer glow so Kai pops against any zone
-  ctx.fillStyle = 'rgba(127, 255, 230, 0.18)';
+  ctx.fillStyle = "rgba(127, 255, 230, 0.18)";
   ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
 
-  // Body
-  ctx.fillStyle = '#7fffe6';
+  ctx.fillStyle = "#7fffe6";
   ctx.fillRect(x, y, w, h);
 
-  // Top highlight (light from above)
-  ctx.fillStyle = '#b8fff4';
+  ctx.fillStyle = "#b8fff4";
   ctx.fillRect(x, y, w, 4);
 
-  // Bottom shadow
-  ctx.fillStyle = '#4dd6c4';
+  ctx.fillStyle = "#4dd6c4";
   ctx.fillRect(x, y + h - 3, w, 3);
 
-  // Eyes — two simple dots, like before
-  ctx.fillStyle = '#0a1f1c';
+  ctx.fillStyle = "#0a1f1c";
   ctx.fillRect(x + 6, y + 9, 4, 4);
   ctx.fillRect(x + 14, y + 9, 4, 4);
 }
@@ -182,35 +193,40 @@ function drawPlatforms() {
       drawFloor(p);
       continue;
     }
-    // Default: antenna-top platform
+    if (p.style === "commentCard") {
+      drawCommentPlatform(p);
+      continue;
+    }
+    if (p.style === "hashtagWall") {
+      drawHashtagWall(p);
+      continue;
+    }
+
     drawAntennaPlatform(p);
   }
 }
+
 function drawFloor(p) {
-  // Dark metallic base
-  ctx.fillStyle = '#1a1a22';
+  const accent = game.currentZone.palette.accent || "#ff9933";
+
+  ctx.fillStyle = "#1a1a22";
   ctx.fillRect(p.x, p.y, p.width, p.height);
 
-  // Top edge — bright cyber line (the "data surface")
-  const accent = game.currentZone.palette.accent || '#ff9933';
   ctx.fillStyle = accent;
   ctx.fillRect(p.x, p.y, p.width, 2);
 
-  // Glow above the top edge — soft halo
   const grad = ctx.createLinearGradient(0, p.y - 8, 0, p.y);
-  grad.addColorStop(0, 'rgba(255, 153, 51, 0)');
-  grad.addColorStop(1, 'rgba(255, 153, 51, 0.18)');
+  grad.addColorStop(0, hexToRgba(accent, 0));
+  grad.addColorStop(1, hexToRgba(accent, 0.18));
   ctx.fillStyle = grad;
   ctx.fillRect(p.x, p.y - 8, p.width, 8);
 
-  // Panel divisions — vertical lines every ~64px to suggest tiles
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
   for (let i = 0; i < p.width; i += 64) {
     ctx.fillRect(p.x + i, p.y + 2, 1, p.height - 2);
   }
 
-  // Subtle circuit dots
-  ctx.fillStyle = 'rgba(255, 153, 51, 0.25)';
+  ctx.fillStyle = hexToRgba(accent, 0.25);
   for (let i = 0; i < p.width; i += 96) {
     const hash = (p.x + i) * 9301 + 49297;
     const yOff = ((hash >> 1) % (p.height - 12)) + 8;
@@ -219,33 +235,27 @@ function drawFloor(p) {
 }
 
 function drawAntennaPlatform(p) {
-  const accent = game.currentZone.palette.accent || '#ff9933';
+  const accent = game.currentZone.palette.accent || "#ff9933";
 
-  // Metallic base
-  ctx.fillStyle = '#1a1a22';
+  ctx.fillStyle = "#1a1a22";
   ctx.fillRect(p.x, p.y, p.width, p.height);
 
-  // Top edge — glowing accent line (where Kai walks)
   ctx.fillStyle = accent;
   ctx.fillRect(p.x, p.y, p.width, 2);
 
-  // Soft halo above the top
   const grad = ctx.createLinearGradient(0, p.y - 6, 0, p.y);
-  grad.addColorStop(0, 'rgba(255, 153, 51, 0)');
-  grad.addColorStop(1, 'rgba(255, 153, 51, 0.25)');
+  grad.addColorStop(0, hexToRgba(accent, 0));
+  grad.addColorStop(1, hexToRgba(accent, 0.25));
   ctx.fillStyle = grad;
   ctx.fillRect(p.x, p.y - 6, p.width, 6);
 
-  // Side edges — subtle highlight
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
   ctx.fillRect(p.x, p.y + 2, 1, p.height - 2);
   ctx.fillRect(p.x + p.width - 1, p.y + 2, 1, p.height - 2);
 
-  // Bottom edge — darker for grounded look
-  ctx.fillStyle = '#0a0a12';
+  ctx.fillStyle = "#0a0a12";
   ctx.fillRect(p.x, p.y + p.height - 2, p.width, 2);
 
-  // Center indicator — small accent square (like a data node)
   if (p.width > 80) {
     ctx.fillStyle = accent;
     ctx.fillRect(p.x + p.width / 2 - 2, p.y + p.height / 2 - 1, 4, 2);
@@ -253,102 +263,62 @@ function drawAntennaPlatform(p) {
 }
 
 function drawAntennaWall(p) {
-  const accent = game.currentZone.palette.accent || '#ff9933';
+  const accent = game.currentZone.palette.accent || "#ff9933";
 
-  // Dark metal base
-  ctx.fillStyle = '#1a1a22';
+  ctx.fillStyle = "#1a1a22";
   ctx.fillRect(p.x, p.y, p.width, p.height);
 
-  // Edge highlights — vertical accent lines on both sides
   ctx.fillStyle = accent;
   ctx.fillRect(p.x, p.y, 2, p.height);
   ctx.fillRect(p.x + p.width - 2, p.y, 2, p.height);
 
-  // Center seam — subtle
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
   ctx.fillRect(p.x + p.width / 2 - 0.5, p.y, 1, p.height);
 
-  // Cross-bracing — small horizontal accent bars at intervals
   ctx.fillStyle = accent;
   const barSpacing = 32;
   for (let by = p.y + 12; by < p.y + p.height - 4; by += barSpacing) {
     ctx.fillRect(p.x + 4, by, p.width - 8, 1);
   }
 
-  // Top cap — flat with a glowing dot (data antenna node)
-  ctx.fillStyle = '#0a0a12';
+  ctx.fillStyle = "#0a0a12";
   ctx.fillRect(p.x - 2, p.y - 2, p.width + 4, 4);
 
   ctx.fillStyle = accent;
   ctx.fillRect(p.x + p.width / 2 - 2, p.y - 5, 4, 3);
 
-  // Glow halo around the top dot
   const grad = ctx.createRadialGradient(
-    p.x + p.width / 2, p.y - 3, 0,
-    p.x + p.width / 2, p.y - 3, 12
+    p.x + p.width / 2,
+    p.y - 3,
+    0,
+    p.x + p.width / 2,
+    p.y - 3,
+    12,
   );
-  grad.addColorStop(0, 'rgba(255, 153, 51, 0.5)');
-  grad.addColorStop(1, 'rgba(255, 153, 51, 0)');
+  grad.addColorStop(0, hexToRgba(accent, 0.5));
+  grad.addColorStop(1, hexToRgba(accent, 0));
   ctx.fillStyle = grad;
   ctx.fillRect(p.x - 10, p.y - 15, p.width + 20, 15);
-}  
-
-function drawAntennaWall(p) {
-  // Main pole
-  ctx.fillStyle = "#1a1a22";
-  ctx.fillRect(p.x, p.y, p.width, p.height);
-
-  // Left edge highlight
-  ctx.fillStyle = "#23252d";
-  ctx.fillRect(p.x, p.y, 2, p.height);
-
-  // Right edge shadow
-  ctx.fillStyle = "#0c0c10";
-  ctx.fillRect(p.x + p.width - 2, p.y, 2, p.height);
-
-  // Cross-bars all the way down (truss/scaffold look)
-  // ctx.fillStyle = "#141215";
-  // const barSpacing = 24;
-  // for (let by = p.y + 16; by < p.y + p.height; by += barSpacing) {
-  //   ctx.fillRect(p.x - 4, by, p.width + 8, 2);
-  // }
-
-  // Top — broken/sharp tip
-  ctx.fillStyle = "#3a2410";
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(p.x + p.width / 2, p.y - 8);
-  ctx.lineTo(p.x + p.width, p.y);
-  ctx.closePath();
-  ctx.fill();
-
-  // Blinking red warning light at top
-  const blink = Math.floor(Date.now() / 600) % 2 === 0;
-  if (blink) {
-    ctx.fillStyle = "#ff4040";
-    ctx.fillRect(p.x + p.width / 2 - 1, p.y - 10, 2, 2);
-  }
 }
 
 function drawBillboardPlatform(p) {
+  const accent = game.currentZone.palette.accent || "#ff9933";
   const f = p.flicker;
   const isOn = f.visible;
 
-  // Outer frame — always visible, even when off
-  ctx.fillStyle = "#3a2410";
+  // Frame
+  ctx.fillStyle = "#1a1a22";
   ctx.fillRect(p.x - 4, p.y - 4, p.width + 8, p.height + 8);
 
-  // Frame highlight
-  ctx.fillStyle = "#7a4a25";
+  ctx.fillStyle = "#2a2a32";
   ctx.fillRect(p.x - 4, p.y - 4, p.width + 8, 2);
 
-  // Screen surface
   if (isOn) {
-    // ON: glowing amber screen with content
-    ctx.fillStyle = "#ff9933";
+    // Glowing accent screen
+    ctx.fillStyle = accent;
     ctx.fillRect(p.x, p.y, p.width, p.height);
 
-    // Scrolling "broadcast" lines
+    // Scrolling broadcast lines
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     const scroll = Math.floor(Date.now() / 100) % 6;
     for (let i = 0; i < Math.ceil(p.height / 3); i++) {
@@ -356,16 +326,16 @@ function drawBillboardPlatform(p) {
       ctx.fillRect(p.x, ly, p.width, 1);
     }
 
-    // Subtle glow halo
-    ctx.fillStyle = "rgba(255, 153, 51, 0.15)";
+    // Glow halo
+    ctx.fillStyle = hexToRgba(accent, 0.15);
     ctx.fillRect(p.x - 8, p.y - 8, p.width + 16, p.height + 16);
   } else {
-    // OFF: dark screen, faint outline
-    ctx.fillStyle = "#1a0a05";
+    // OFF: dark screen
+    ctx.fillStyle = "#0a0a12";
     ctx.fillRect(p.x, p.y, p.width, p.height);
 
-    // Faint "OFF" status — barely visible static dots
-    ctx.fillStyle = "rgba(100, 60, 30, 0.3)";
+    // Faint static dots
+    ctx.fillStyle = hexToRgba(accent, 0.2);
     for (let i = 0; i < 5; i++) {
       const hash = (p.x + i * 17 + Math.floor(Date.now() / 200)) * 9301;
       const px = p.x + Math.abs(hash % p.width);
@@ -374,8 +344,8 @@ function drawBillboardPlatform(p) {
     }
   }
 
-  // Frame border posts (left/right vertical struts)
-  ctx.fillStyle = "#2a1810";
+  // Vertical struts
+  ctx.fillStyle = "#0a0a12";
   ctx.fillRect(p.x - 4, p.y, 2, p.height);
   ctx.fillRect(p.x + p.width + 2, p.y, 2, p.height);
 }
@@ -388,7 +358,6 @@ function drawSpikes(spike) {
   for (let i = 0; i < count; i++) {
     const x = spike.x + offset + i * spikeWidth;
 
-    // Dark rusted-metal base
     ctx.fillStyle = "#2a1810";
     ctx.beginPath();
     ctx.moveTo(x, spike.y + spike.height);
@@ -397,7 +366,6 @@ function drawSpikes(spike) {
     ctx.closePath();
     ctx.fill();
 
-    // Hot tip — small triangle at the top, glowing
     ctx.fillStyle = "#ff6b3d";
     ctx.beginPath();
     ctx.moveTo(x + spikeWidth / 2 - 2, spike.y + 5);
@@ -406,7 +374,6 @@ function drawSpikes(spike) {
     ctx.closePath();
     ctx.fill();
 
-    // Edge highlight on left side of spike for dimension
     ctx.strokeStyle = "#5a3018";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -415,7 +382,6 @@ function drawSpikes(spike) {
     ctx.stroke();
   }
 
-  // Subtle hazard glow at the base
   const glow = ctx.createLinearGradient(
     0,
     spike.y + spike.height - 8,
@@ -431,35 +397,31 @@ function drawSpikes(spike) {
 function drawTower() {
   if (!game.tower) return;
   const t = game.tower;
+  const accent = game.currentZone.palette.accent || "#ff9933";
 
-  // Soft glow
-  ctx.fillStyle = "rgba(255, 153, 51, 0.15)";
+  ctx.fillStyle = hexToRgba(accent, 0.15);
   ctx.fillRect(t.x - 8, t.y - 8, t.width + 16, t.height + 16);
 
-  // Tower body
   ctx.fillStyle = t.color;
   ctx.fillRect(t.x, t.y, t.width, t.height);
 
-  // Door — positioned near the TOP of the tower, where the player will arrive
   const doorWidth = 28;
   const doorHeight = 50;
   const doorX = t.x + (t.width - doorWidth) / 2;
-  const doorY = t.y + 20; // 20px below the top
+  const doorY = t.y + 20;
   ctx.fillStyle = t.doorColor;
   ctx.fillRect(doorX, doorY, doorWidth, doorHeight);
 }
+
 function drawTowerPrompt() {
   if (!game.towerNearby) return;
   const t = game.tower;
+  const accent = game.currentZone.palette.accent || "#ff9933";
 
-  // Position above the tower
   const px = t.x + t.width / 2;
   const py = t.y - 20;
-
-  // Subtle bobbing for visual appeal
   const bob = Math.sin(Date.now() / 200) * 3;
 
-  // Background pill behind the text
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -473,17 +435,14 @@ function drawTowerPrompt() {
   const boxX = px - boxWidth / 2;
   const boxY = py - boxHeight / 2 + bob;
 
-  // Backdrop
   ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
   ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
 
-  // Amber border
-  ctx.strokeStyle = "#ff9933";
+  ctx.strokeStyle = accent;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-  // Text
-  ctx.fillStyle = "#ff9933";
+  ctx.fillStyle = accent;
   ctx.fillText(text, px, py + bob);
 
   ctx.restore();
@@ -505,32 +464,29 @@ function checkTowerEntry() {
     width: t.door.width,
     height: t.door.height,
   };
-  // Kai is "near" if his bounds overlap the door zone
   game.towerNearby = rectsOverlap(game.kai, door);
 
-  // Trigger fires only on Enter press while nearby
   if (game.towerNearby && keys.enterPressed) {
     game.tower.triggered = true;
-    keys.enterPressed = false; // consume the press
+    keys.enterPressed = false;
 
-    console.log(
-      "Tower reached and entered! Quiz / next zone would trigger here.",
-      {
-        topic: game.currentZone.quizTopic,
-        pool: game.currentZone.quizPool,
-      },
-    );
-    // TODO: when Zone 2 exists, call: loadZone(ZONE_2);
+    const next = game.currentZone.nextZone;
+    if (next) {
+      console.log(
+        `Transitioning from ${game.currentZone.name} to next zone...`,
+      );
+      loadZone(next);
+    } else {
+      console.log("Game complete! (No next zone defined.)");
+    }
   }
 }
 
 function render() {
   const palette = game.currentZone.palette;
 
-  // Background — drawn in screen space (no camera translate)
   drawBackground(palette);
 
-  // World — drawn with camera translate
   ctx.save();
   ctx.translate(
     -camera.x + camera.shakeOffsetX,
@@ -540,10 +496,10 @@ function render() {
   drawTower();
   drawTowerPrompt();
   drawEnemies(ctx, game.enemies);
+  drawBubbles(ctx, game.bubbles);
   drawKai();
   ctx.restore();
 
-  // Foreground effects — drawn in screen space, on top of everything
   drawForegroundEffects();
 }
 
@@ -553,14 +509,19 @@ function gameLoop() {
   updatePlayer(game.kai, game.platforms);
   updateEnemies(game.enemies, game.platforms);
   checkEnemyCollisions(game.kai, game.enemies);
+
+  updateSpawners(game.bubbleSpawners, game.bubbles, game.kai.x);
+  updateBubbles(game.bubbles);
+  checkBubbleCollisions(game.kai, game.bubbles);
+
   checkTowerEntry();
-  updateCamera(game.kai, game.levelWidth);
+  updateCamera(game.kai, game.levelWidth, game.cameraRegions);
   updateHud();
   render();
-  keys.enterPressed = false; // ← consume the press at end of frame
+  keys.enterPressed = false;
   requestAnimationFrame(gameLoop);
 }
 
 // === Boot ===
-loadZone(ZONE_1);
+loadZone(ZONE_2);
 gameLoop();

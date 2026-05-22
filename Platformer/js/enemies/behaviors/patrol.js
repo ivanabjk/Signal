@@ -48,28 +48,26 @@ const PatrolBehavior = {
 
   draw(ctx, enemy) {
     const state = enemy.behaviorState;
-
-    // Subtle bob so it looks like it's hovering
     const bob = Math.sin(Date.now() / 300 + enemy.x * 0.01) * 2;
     const y = enemy.y + bob;
 
-    // === Drone body — dark base ===
-    ctx.fillStyle = "#1f0f08";
+    // === Body base ===
+    ctx.fillStyle = enemy.color || "#1f0f08"; // use zone color
     ctx.fillRect(enemy.x, y, enemy.width, enemy.height);
 
-    // Body highlight on top (light source from above)
-    ctx.fillStyle = "#3d2417";
+    // Body highlight
+    ctx.fillStyle = "#3d2417"; // can stay subtle dark highlight
     ctx.fillRect(enemy.x, y, enemy.width, 4);
 
-    // === Screen face — amber glowing rectangle ===
+    // === Screen face ===
     const screenInset = 4;
     const screenY = y + 6;
     const screenW = enemy.width - screenInset * 2;
     const screenH = 12;
-    ctx.fillStyle = "#ff9933";
+    ctx.fillStyle = enemy.eyeColor || "#ff9933"; // neon face color
     ctx.fillRect(enemy.x + screenInset, screenY, screenW, screenH);
 
-    // Glitch pattern on screen — small scrolling lines
+    // Glitch lines
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     const scroll = Math.floor(Date.now() / 80) % 4;
     for (let i = 0; i < 3; i++) {
@@ -77,7 +75,7 @@ const PatrolBehavior = {
       ctx.fillRect(enemy.x + screenInset, lineY, screenW, 1);
     }
 
-    // Screen "eye" — a single black slot that faces movement direction
+    // Eye slot
     ctx.fillStyle = "#000";
     const eyeW = 4;
     const eyeY = screenY + screenH / 2 - 1;
@@ -92,20 +90,20 @@ const PatrolBehavior = {
       ctx.fillRect(enemy.x + screenInset + 1, eyeY, eyeW, 3);
     }
 
-    // === Antennas on top ===
+    // Antennas
     ctx.fillStyle = "#5a3018";
     ctx.fillRect(enemy.x + 6, y - 4, 1, 4);
     ctx.fillRect(enemy.x + enemy.width - 7, y - 4, 1, 4);
 
-    // Antenna tips — small dots
-    ctx.fillStyle = "#ff9933";
+    // Antenna tips
+    ctx.fillStyle = enemy.eyeColor || "#ff9933"; // match face color
     ctx.fillRect(enemy.x + 5, y - 5, 3, 2);
     ctx.fillRect(enemy.x + enemy.width - 8, y - 5, 3, 2);
 
-    // === Status light — small red blinking dot ===
+    // Status light
     const blink = Math.floor(Date.now() / 400) % 2 === 0;
     if (blink) {
-      ctx.fillStyle = "#ff4040";
+      ctx.fillStyle = "#3399ff"; // electric blue blink for Zone 2
       ctx.fillRect(enemy.x + enemy.width / 2 - 1, y + enemy.height - 4, 2, 2);
     }
   },
