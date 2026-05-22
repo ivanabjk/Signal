@@ -1,16 +1,17 @@
+//player.js
+
 const PLAYER_SPEED = 2.5;
 const JUMP_IMPULSE = -8;
 const DOUBLE_JUMP_IMPULSE = -7.5;
 const MAX_JUMPS = 2;
-const INVINCIBILITY_FRAMES = 270;     // was 60 — now 1.5 seconds
+const INVINCIBILITY_FRAMES = 270; // was 60 — now 1.5 seconds
 const COYOTE_FRAMES = 8;
 const JUMP_BUFFER_FRAMES = 10;
-const KNOCKBACK_X = 6;               // horizontal push away from enemy
-const KNOCKBACK_Y = -7;              // upward push (negative = up)
-const KNOCKBACK_FRAMES = 10; 
+const KNOCKBACK_X = 6; // horizontal push away from enemy
+const KNOCKBACK_Y = -7; // upward push (negative = up)
+const KNOCKBACK_FRAMES = 10;
 
 function updatePlayer(kai, platforms) {
-
   // Knockback override — input ignored for a few frames after zap
   if (kai.knockbackTimer > 0) {
     kai.knockbackTimer--;
@@ -18,7 +19,7 @@ function updatePlayer(kai, platforms) {
   } else {
     // Normal input
     kai.vx = 0;
-    if (keys.left)  kai.vx = -PLAYER_SPEED;
+    if (keys.left) kai.vx = -PLAYER_SPEED;
     if (keys.right) kai.vx = PLAYER_SPEED;
   }
 
@@ -46,9 +47,9 @@ function updatePlayer(kai, platforms) {
     kai.jumpBuffer = 0;
     if (isFirstJump) {
       kai.coyoteTimer = 0;
-      playSfx('jump');
+      playSfx("jump");
     } else {
-      playSfx('doubleJump');
+      playSfx("doubleJump");
     }
   }
 
@@ -66,6 +67,15 @@ function updatePlayer(kai, platforms) {
     return; // skip the rest of the update — Kai is being reloaded
   }
 
+  // === Pit check ===
+  if (kai.y > 600) {
+    // adjust based on your level height
+    killKaiInstantly(); // already defined
+    kai.hearts = 0; // force hearts to zero
+    reloadZone(); // restart from spawn
+    return;
+  }
+
   if (kai.x < 0) kai.x = 0;
   if (kai.x + kai.width > game.levelWidth) {
     kai.x = game.levelWidth - kai.width;
@@ -78,7 +88,7 @@ function zapKai(kai, enemy) {
   if (kai.invincibleTimer > 0) return;
   kai.hearts--;
   kai.invincibleTimer = INVINCIBILITY_FRAMES;
-  playSfx('zap');
+  playSfx("zap");
   shakeCamera(6, 12);
 
   if (enemy) {
@@ -97,10 +107,10 @@ function zapKai(kai, enemy) {
 }
 // Add this function to player.js
 function killKaiInstantly() {
-  if (game.kai.dying) return;  // already dying
+  if (game.kai.dying) return; // already dying
   game.kai.dying = true;
   game.kai.hearts = 0;
-  playSfx('zap');
+  playSfx("zap");
   shakeCamera(16, 30);
   reloadZone();
 }
@@ -109,11 +119,18 @@ function checkEnemyCollisions(kai, enemies) {
   for (const e of enemies) {
     if (!e.alive) continue;
     if (rectsOverlap(kai, e)) {
-      zapKai(kai, e);  // ← pass the enemy
+      if (e.behavior && e.behavior === ChaserBehavior) {
+        // Chasers insta-kill
+        killKaiInstantly();
+      } else {
+        // Normal enemies zap
+        zapKai(kai, e);
+      }
       return;
     }
   }
 }
+
 function checkBubbleCollisions(kai, bubbles) {
   for (const b of bubbles) {
     if (!b.alive) continue;

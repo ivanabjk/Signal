@@ -1,3 +1,4 @@
+//input.js
 const keys = {
   left: false,
   right: false,

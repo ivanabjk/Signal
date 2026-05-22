@@ -1,3 +1,4 @@
+// zone1.js
 const ZONE_1 = {
   id: "zone1",
   name: "Zone 1 — The Broadcast District",

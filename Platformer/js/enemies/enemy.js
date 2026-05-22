@@ -1,3 +1,5 @@
+//enemy.js
+
 // Base enemy module — handles everything shared:
 // position, size, alive state, contact damage, reset, behavior dispatch.
 
@@ -5,6 +7,7 @@
 const BEHAVIORS = {
   patrol: PatrolBehavior,
   stationary: StationaryBehavior,
+  chaser: ChaserBehavior,
 };
 
 function createEnemy(config) {
@@ -32,10 +35,10 @@ function createEnemy(config) {
   return enemy;
 }
 
-function updateEnemies(enemies, platforms) {
+function updateEnemies(enemies, platforms, game) {
   for (const e of enemies) {
     if (!e.alive) continue;
-    e.behavior.update(e, platforms);
+    e.behavior.update(e, platforms, game);
   }
 }
 

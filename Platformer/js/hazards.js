@@ -1,3 +1,5 @@
+//hazards.js
+
 // Hazards module — entities that damage Kai but aren't traditional enemies.
 // Currently: toxic bubbles for Zone 2.
 
@@ -73,4 +75,84 @@ function drawBubbles(ctx, bubbles) {
 // Reset all bubbles — called by reloadZone
 function clearBubbles(bubbles) {
   bubbles.length = 0;
+}
+
+// === Hammer hazards (Zone 3) ===
+
+function createHammer(config) {
+  return {
+    type: 'hammer',
+    pivotX: config.x,            // where the hammer is mounted
+    pivotY: config.y,
+    length: config.length || 80, // length of handle
+    headSize: config.headSize || 30,
+    swingSpeed: config.swingSpeed || 0.005,  // radians per ms
+    phase: config.phase || 0,    // offset so hammers don't all swing in sync
+    arc: config.arc || (Math.PI / 3),  // total swing angle (here: ±60°)
+  };
+}
+
+function updateHammers(hammers) {
+  // No state to update — angle is derived from time + phase
+  // (kept here for symmetry with other update functions)
+}
+
+function getHammerHeadPosition(h) {
+  const angle = Math.sin(Date.now() * h.swingSpeed + h.phase) * h.arc;
+  // Hammer hangs DOWN from pivot, swings left↔right
+  const hx = h.pivotX + Math.sin(angle) * h.length;
+  const hy = h.pivotY + Math.cos(angle) * h.length;
+  return { x: hx, y: hy, angle };
+}
+
+function drawHammers(hammers) {
+  for (const h of hammers) {
+    const { x: hx, y: hy, angle } = getHammerHeadPosition(h);
+
+    // Mount point — small dark anchor
+    ctx.fillStyle = '#1a0a0a';
+    ctx.fillRect(h.pivotX - 6, h.pivotY - 4, 12, 6);
+    ctx.fillStyle = '#ff2222';
+    ctx.fillRect(h.pivotX - 4, h.pivotY - 2, 8, 2);
+
+    // Handle — line from pivot to head
+    ctx.strokeStyle = '#3a0a0a';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(h.pivotX, h.pivotY);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+
+    // Head — dark heavy block with red edge
+    const half = h.headSize / 2;
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(hx - half, hy - half / 2, h.headSize, h.headSize);
+    ctx.fillStyle = '#ff2222';
+    ctx.fillRect(hx - half, hy - half / 2, h.headSize, 2);
+    ctx.fillRect(hx - half, hy + half / 2 - 2, h.headSize, 2);
+
+    // Subtle glow under the head
+    const glow = ctx.createRadialGradient(hx, hy, 0, hx, hy, h.headSize);
+    glow.addColorStop(0, 'rgba(255, 40, 40, 0.3)');
+    glow.addColorStop(1, 'rgba(255, 40, 40, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(hx - h.headSize, hy - h.headSize, h.headSize * 2, h.headSize * 2);
+  }
+}
+
+function checkHammerCollisions(kai, hammers) {
+  for (const h of hammers) {
+    const { x: hx, y: hy } = getHammerHeadPosition(h);
+    const half = h.headSize / 2;
+    const headBox = {
+      x: hx - half,
+      y: hy - half / 2,
+      width: h.headSize,
+      height: h.headSize,
+    };
+    if (rectsOverlap(kai, headBox)) {
+      zapKai(kai, headBox);
+      return;
+    }
+  }
 }

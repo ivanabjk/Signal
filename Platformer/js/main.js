@@ -1,3 +1,5 @@
+//main.js
+
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 const heartsHud = document.getElementById("hearts");
@@ -38,6 +40,7 @@ const game = {
   bubbles: [],
   bubbleSpawners: [],
   cameraRegions: [],
+  hammers: [],
   currentZone: null,
   towerNearby: false,
 };
@@ -79,18 +82,36 @@ function loadZone(zoneConfig) {
     }
   }
 
+  game.hammers = (zoneConfig.hammers || []).map((h) => createHammer(h));
+
   game.enemies = zoneConfig.enemies.map((e) => {
-    const platform = game.platforms[e.platformIndex];
-    const offsetX = e.offsetX ?? 20;
-    return createEnemy({
-      x: platform.x + offsetX,
-      y: platform.y - 28,
-      behaviorName: e.behavior,
-      platform: platform,
-      speed: e.options?.speed,
-      color: e.options?.color,
-      eyeColor: e.options?.eyeColor,
-    });
+    if (e.platformIndex !== undefined) {
+      const platform = game.platforms[e.platformIndex];
+      const offsetX = e.offsetX ?? 20;
+      return createEnemy({
+        x: platform.x + offsetX,
+        y: platform.y - 28,
+        behaviorName: e.behavior,
+        platform: platform,
+        speed: e.options?.speed,
+        color: e.options?.color,
+        eyeColor: e.options?.eyeColor,
+      });
+    } else {
+      // For stationary enemies with explicit x/y
+      return createEnemy({
+        x: e.x,
+        y: e.y,
+        width: e.width,
+        height: e.height,
+        behaviorName: e.behavior,
+        color: e.color,
+        eyeColor: e.eyeColor,
+        speed: e.options?.speed,
+        activationDelay: e.options?.activationDelay,
+        triggerRegion: e.options?.triggerRegion, // ← add
+      });
+    }
   });
 
   game.bubbles = [];
@@ -199,6 +220,10 @@ function drawPlatforms() {
     }
     if (p.style === "hashtagWall") {
       drawHashtagWall(p);
+      continue;
+    }
+    if (p.style === "spywarePatch") {
+      drawSpywarePatch(p);
       continue;
     }
 
@@ -497,9 +522,11 @@ function render() {
   drawTowerPrompt();
   drawEnemies(ctx, game.enemies);
   drawBubbles(ctx, game.bubbles);
+  drawHammers(game.hammers);
   drawKai();
   ctx.restore();
 
+  drawHazards(game.currentZone.hazards);
   drawForegroundEffects();
 }
 
@@ -507,12 +534,15 @@ function render() {
 function gameLoop() {
   updatePlatforms(game.platforms);
   updatePlayer(game.kai, game.platforms);
-  updateEnemies(game.enemies, game.platforms);
+  updateEnemies(game.enemies, game.platforms, game);
   checkEnemyCollisions(game.kai, game.enemies);
 
   updateSpawners(game.bubbleSpawners, game.bubbles, game.kai.x);
   updateBubbles(game.bubbles);
   checkBubbleCollisions(game.kai, game.bubbles);
+
+  updateHammers(game.hammers); // ← add
+  checkHammerCollisions(game.kai, game.hammers); // ← add
 
   checkTowerEntry();
   updateCamera(game.kai, game.levelWidth, game.cameraRegions);
@@ -523,5 +553,5 @@ function gameLoop() {
 }
 
 // === Boot ===
-loadZone(ZONE_2);
+loadZone(ZONE_3);
 gameLoop();

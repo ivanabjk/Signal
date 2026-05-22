@@ -1,3 +1,4 @@
+// zone2.js
 const ZONE_2 = {
   id: "zone2",
   name: "Zone 2 — The Social Quarter",
@@ -18,9 +19,9 @@ const ZONE_2 = {
   platforms: [
     // === Section A: Intro floor ===
     [0, 500, 700, 40, "#1a1430"], // ground floor
-    [300, 420, 160, 16, "#2a2040", null, null, "commentCard"], // first ledge
-    [500, 340, 160, 16, "#2a2040", null, null, "commentCard"], // second ledge
-    [250, -140, 40, 200, "#1a1430", null, null, "hashtagWall"], // vertical obstacle
+    [300, 420, 160, 16, "#2a2040"], // first ledge
+    [500, 340, 160, 16, "#2a2040"], // second ledge
+    [250, -140, 40, 200, "#1a1430"], // vertical obstacle
     [200, 260, 160, 16], // third ledge left
     [
       450,
@@ -98,3 +99,10 @@ const ZONE_2 = {
 
   nextZone: null,
 };
+// Chain Zone 1 → Zone 2, Zone 2 → Zone 3
+if (typeof ZONE_1 !== 'undefined') {
+  ZONE_1.nextZone = ZONE_2;
+}
+if (typeof ZONE_3 !== 'undefined') {
+  ZONE_2.nextZone = ZONE_3;
+}

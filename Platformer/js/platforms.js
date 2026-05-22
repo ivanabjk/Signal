@@ -1,3 +1,5 @@
+//platforms.js
+
 // Platform factory
 function createPlatform(x, y, width, height, color = '#8b5a2b') {
   return { x, y, width, height, color, solid: true, flicker: null };

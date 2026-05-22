@@ -1,3 +1,5 @@
+//patrol.js
+
 // Patrol behavior — walks back and forth on a single platform,
 // flips direction at platform edges or when blocked by other platforms.
 

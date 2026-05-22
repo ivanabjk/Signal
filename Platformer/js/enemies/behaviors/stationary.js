@@ -1,22 +1,33 @@
-// Stationary behavior — doesn't move. Used for Phishing Lures in Zone 3.
-// Will be filled in when we build Zone 3.
+// stationary.js
 
+// Stationary behavior — does not move, just sits and harms Kai on contact
 const StationaryBehavior = {
   init(enemy, config) {
-    // disguise hint, etc.
+    // No movement state needed
   },
 
   update(enemy, platforms) {
-    // intentionally empty
+    // No movement — stays where it was placed
   },
 
   draw(ctx, enemy) {
-    // For now, just draw a placeholder rectangle
-    ctx.fillStyle = enemy.color;
-    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+    const bob = Math.sin(Date.now() / 400 + enemy.x * 0.02) * 3;
+    const y = enemy.y + bob;
+
+    // Glowing lure body
+    ctx.fillStyle = enemy.color || "#66ff66";
+    ctx.beginPath();
+    ctx.arc(enemy.x + enemy.width/2, y + enemy.height/2, enemy.width/2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Inner glow
+    ctx.fillStyle = enemy.eyeColor || "#ff3333";
+    ctx.beginPath();
+    ctx.arc(enemy.x + enemy.width/2, y + enemy.height/2, enemy.width/4, 0, Math.PI*2);
+    ctx.fill();
   },
 
   reset(enemy) {
-    // nothing to reset
+    // Nothing to reset
   },
 };

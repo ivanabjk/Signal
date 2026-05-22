@@ -1,3 +1,5 @@
+//render.js
+
 // Background rendering system for Zone 1 — and reusable for future zones.
 // Each layer is procedurally drawn, no images needed.
 
@@ -244,6 +246,60 @@ function drawPulseLighting() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+function drawSpywarePatch(p) {
+  ctx.fillStyle = "#102010";
+  ctx.fillRect(p.x, p.y, p.width, p.height);
+
+  // Corrupted green/red glitch lines
+  ctx.fillStyle = "#66ff66";
+  for (let i = 0; i < p.width; i += 12) {
+    ctx.fillRect(p.x + i, p.y + ((Date.now() / 50) % p.height), 2, 6);
+  }
+
+  ctx.fillStyle = "#ff3333";
+  ctx.fillRect(p.x, p.y, p.width, 2);
+}
+
+function drawHammer(p) {
+  const angle = (Math.sin(Date.now() / 500) * Math.PI) / 4; // swings ±45°
+  const cx = p.x + p.width / 2;
+  const cy = p.y;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  ctx.fillStyle = "#ff3333";
+  ctx.fillRect(-10, 0, 20, 80); // hammer handle
+  ctx.fillStyle = "#660000";
+  ctx.fillRect(-20, 70, 40, 20); // hammer head
+
+  ctx.restore();
+}
+
+function drawFallingCode() {
+  ctx.fillStyle = "rgba(0,255,0,0.2)";
+  for (let i = 0; i < 40; i++) {
+    const x = (i * 50 + Date.now() / 20) % canvas.width;
+    const y = (Date.now() / 10 + i * 30) % canvas.height;
+    ctx.fillText("01", x, y);
+  }
+}
+
+function drawErrorOverlay() {
+  const alpha = (Math.sin(Date.now() / 600) + 1) * 0.1;
+  ctx.fillStyle = `rgba(255,0,0,${alpha})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+function drawHazards(hazards) {
+  if (!hazards) return;
+  for (const h of hazards) {
+    if (h.type === "hammer") {
+      drawHammer(h);
+    }
+  }
+}
+
 // Master function — called from render() before the world translate
 function drawBackground(palette) {
   drawSky(palette);
@@ -259,5 +315,9 @@ function drawForegroundEffects() {
   if (game.currentZone.id === "zone2") {
     drawNotificationBubbles();
     // drawPulseLighting();
+  }
+  if (game.currentZone.id === "zone3") {
+    drawFallingCode();
+    drawErrorOverlay(); 
   }
 }

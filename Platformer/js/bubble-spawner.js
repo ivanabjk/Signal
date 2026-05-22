@@ -1,3 +1,5 @@
+// bubble-spawner.js
+
 // Bubble spawner — manages spawn points and timing for hazardous bubbles.
 
 function createSpawner(zoneConfig) {
