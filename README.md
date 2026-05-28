@@ -22,7 +22,6 @@ Each zone ends with a checkpoint tower locked behind a **five-card sorting quiz*
 
 ## Technical
 
-- Built in a single HTML file
 - Uses HTML5 Canvas for gameplay
 - Quiz UI uses a simple `div` overlay
-- No external libraries
+- Uses GitHub pages
