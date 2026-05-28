@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SIGNAL</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas" width="960" height="540"></canvas>
+
+      <!-- HUD overlays the canvas -->
+      <div id="hud">
+        <div id="hearts">♥ ♥ ♥</div>
+        <div id="zone-label">Zone 1 — The Broadcast District</div>
+      </div>
+
+      <!-- ── QUIZ OVERLAY ── -->
+      <div id="quiz-overlay" class="hidden">
+        <!-- NULL glitch flash -->
+        <div id="quiz-null-fx"></div>
+
+        <div id="quiz-inner" class="quiz-inner qz1">
+          <!-- bg grid -->
+          <div id="quiz-bg-grid"></div>
+          <div id="quiz-vignette"></div>
+
+          <!-- Header -->
+          <div id="quiz-header">
+            <div id="quiz-hearts">
+              <span class="quiz-heart">♥</span>
+              <span class="quiz-heart">♥</span>
+              <span class="quiz-heart">♥</span>
+            </div>
+            <div id="quiz-brand">
+              <div id="quiz-game-title">SIGNAL</div>
+              <div id="quiz-zone-sub">checkpoint</div>
+            </div>
+            <div id="quiz-score-wrap">
+              <span id="quiz-score-lbl">SCORE</span>
+              <span id="quiz-score-val">000</span>
+            </div>
+          </div>
+
+          <!-- Status bar -->
+          <div id="quiz-statusbar">
+            <div id="quiz-echo-msg">Awaiting signal…</div>
+            <div id="quiz-prog-track"><div id="quiz-prog-fill"></div></div>
+          </div>
+
+          <!-- Play area (cards fall here) -->
+          <div id="quiz-play"></div>
+
+          <!-- Bins (drop targets) -->
+          <div id="quiz-bins"></div>
+        </div>
+
+        <!-- Panel overlay (intro / story / game-over screens) -->
+        <div id="quiz-panel-overlay" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Scripts load in order: utilities first, main last -->
+    <!-- Scripts load in order: utilities first, main last -->
+    <script src="js/input.js"></script>
+    <script src="js/sfx.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/platforms.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/hazards.js"></script>
+    <script src="js/bubble-spawner.js"></script>
+    <script src="js/enemies/behaviors/patrol.js"></script>
+    <script src="js/enemies/behaviors/stationary.js"></script>
+    <script src="js/enemies/behaviors/chaser.js"></script>
+    <script src="js/enemies/enemy.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/story.js"></script>
+    <script src="js/zones/zone1.js"></script>
+    <script src="js/zones/zone2.js"></script>
+    <script src="js/zones/zone3.js"></script>
+    <script src="js/quiz.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
