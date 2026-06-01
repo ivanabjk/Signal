@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>SIGNAL</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="screens.css" />
   </head>
   <body>
     <div id="game-container">
@@ -58,6 +59,114 @@
         <!-- Panel overlay (intro / story / game-over screens) -->
         <div id="quiz-panel-overlay" class="hidden"></div>
       </div>
+
+      <!-- ══ START SCREEN ══════════════════════════════════════════ -->
+      <div id="start-overlay">
+        <canvas id="start-static-canvas"></canvas>
+        <div class="screen-grid"></div>
+        <div class="screen-vignette"></div>
+
+        <div class="screen-content">
+          <!-- Top status bar -->
+          <div id="start-topbar">
+            <span>SIGNAL v1.0.0 · GRID SYSTEM</span>
+            <span class="start-topbar-blink">● OFFLINE</span>
+            <span>NULL.ACTIVE</span>
+          </div>
+
+          <!-- Main content -->
+          <div id="start-body">
+            <div id="start-title-block">
+              <div id="start-eyebrow">
+                A story about finding truth in the noise
+              </div>
+              <div id="start-glitch-title">SIGNAL</div>
+              <div id="start-tagline">
+                Follow the signal · Find your sister · Stop the noise
+              </div>
+            </div>
+
+            <div class="start-divider"></div>
+
+            <!-- Typewriter lore -->
+            <div id="start-lore-wrap">
+              <div id="start-lore-lines"></div>
+            </div>
+
+            <!-- Start button — revealed after lore -->
+            <div id="start-btn-wrap">
+              <button id="start-btn">ENTER THE GRID</button>
+              <div id="start-btn-sub">PRESS ENTER OR CLICK</div>
+            </div>
+          </div>
+
+          <!-- Bottom bar -->
+          <div id="start-bottombar">
+            <span>ZONE 1–3 · THE BROADCAST DISTRICT → THE DARK WEB DEPTHS</span>
+            <span>KAI · JOURNALIST RESCUE MISSION</span>
+          </div>
+        </div>
+      </div>
+      <!-- ══ END START SCREEN ══════════════════════════════════════ -->
+
+      <!-- ══ NARRATION BOX (always in DOM, shown/hidden by JS) ═════ -->
+      <div id="narration-box">
+        <div class="narr-topline"></div>
+        <div class="narr-inner">
+          <span id="narration-speaker">ECHO</span>
+          <span id="narration-text"></span><span id="narration-cursor"></span>
+        </div>
+      </div>
+      <!-- ══ END NARRATION BOX ══════════════════════════════════════ -->
+
+      <!-- ══ END SCREEN ════════════════════════════════════════════ -->
+      <div id="end-overlay" class="hidden">
+        <canvas id="end-static-canvas"></canvas>
+        <div class="screen-grid"></div>
+        <div class="screen-vignette"></div>
+
+        <div class="screen-content">
+          <!-- Top bar -->
+          <div id="end-topbar">
+            <span>SIGNAL v1.0.0 · GRID SYSTEM</span>
+            <span>ALL ZONES CLEARED</span>
+            <span>NULL.NEUTRALISED</span>
+          </div>
+
+          <!-- Main content -->
+          <div id="end-body">
+            <div id="end-header">
+              <div id="end-signal-tag">END TRANSMISSION</div>
+              <div id="end-null-text">NULL</div>
+              <div id="end-subtitle">Signal restored · The Grid reboots</div>
+            </div>
+
+            <!-- Score -->
+            <div id="end-score-block">
+              <span id="end-score-lbl">FINAL SCORE</span>
+              <div id="end-score-val">000000</div>
+            </div>
+
+            <div class="end-divider"></div>
+
+            <!-- Typewriter dialogue -->
+            <div id="end-dialogue"></div>
+
+            <!-- Restart CTA -->
+            <div id="end-cta-wrap">
+              <button id="end-restart-btn">PLAY AGAIN</button>
+              <div id="end-restart-sub">THE GRID NEEDS YOU</div>
+            </div>
+          </div>
+
+          <!-- Bottom bar -->
+          <div id="end-bottombar">
+            <span>KAI · JOURNALIST RESCUE MISSION · COMPLETE</span>
+            <span>MIA FOUND · GRID REBOOTING</span>
+          </div>
+        </div>
+      </div>
+      <!-- ══ END SCREEN ════════════════════════════════════════════ -->
     </div>
 
     <!-- Scripts load in order: utilities first, main last -->
@@ -80,6 +189,7 @@
     <script src="js/zones/zone2.js"></script>
     <script src="js/zones/zone3.js"></script>
     <script src="js/quiz.js"></script>
+    <script src="js/screens.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

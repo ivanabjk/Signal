@@ -127,6 +127,8 @@ function loadZone(zoneConfig) {
   game.kai.spawnX = zoneConfig.spawn.x;
   game.kai.spawnY = zoneConfig.spawn.y;
   document.getElementById("zone-label").textContent = zoneConfig.name;
+  Narration.showForZone(zoneConfig.id);
+
   reloadZone();
 }
 
@@ -510,7 +512,9 @@ function checkTowerEntry() {
         if (passed && next) {
           loadZone(next);
         } else if (passed) {
-          console.log("Game complete! All zones cleared.");
+          // Show end screen with accumulated quiz score
+          game.quizOpen = true;   // keep game loop paused
+          EndScreen.show(qScore); // qScore is the global from quiz.js       
         }
         // If failed, player stays in current zone (tower resets after a delay)
         if (!passed) {
@@ -570,6 +574,8 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// === Boot ===
-loadZone(ZONE_1);
-gameLoop();
+// Show start screen — game doesn't begin until player clicks
+     StartScreen.show(() => {
+       loadZone(ZONE_1);
+       gameLoop();
+     });
