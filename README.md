@@ -1,4 +1,6 @@
-# SIGNAL
+<img width="1195" height="138" alt="image" src="https://github.com/user-attachments/assets/808c97b5-e262-4be9-92de-506501120667" />
+
+---
 
 SIGNAL is a 2D side-scrolling platformer about media literacy and misinformation.
 
